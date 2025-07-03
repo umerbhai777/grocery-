@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>M. Siddique Rice Store</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f5f5f5; }
+    header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+
+    /* 🔝 Navbar Styles */
+    .navbar {
+      background-color: #ffffff;
+      border-bottom: 1px solid #ddd;
+      padding: 10px 0;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .navbar ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .navbar li {
+      margin: 0 15px;
+    }
+    .navbar a {
+      text-decoration: none;
+      color: #4CAF50;
+      font-weight: bold;
+      padding: 5px 10px;
+      transition: 0.3s;
+    }
+    .navbar a:hover {
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 5px;
+    }
+
+    .slider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding: 20px; gap: 20px; flex-wrap: wrap; justify-content: center; }
+    .product { flex: 0 0 auto; scroll-snap-align: start; background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 250px; padding: 15px; text-align: center; }
+    .product img { width: 100%; height: 150px; object-fit: contain; margin-bottom: 10px; }
+    .product button { padding: 10px 15px; background-color: #4CAF50; border: none; color: white; border-radius: 5px; cursor: pointer; width: 100%; }
+    .product button:disabled { background-color: gray; cursor: not-allowed; }
+    .cart { padding: 20px; background: white; margin: 20px auto; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 500px; }
+    .cart h2 { margin-top: 0; text-align: center; }
+    .cart-items { margin-top: 10px; }
+    .order-btn { margin-top: 15px; background: #25D366; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
+    .admin-controls { margin-top: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 10px; background: #fff; }
+    .admin-controls input, .admin-controls select { padding: 5px; margin: 5px 0; width: 100%; }
+    .admin-controls button { padding: 10px 15px; margin: 5px 0; width: 100%; }
+    #admin-panel { max-width: 500px; margin: auto; }
+    @media (max-width: 600px) {
+      .slider { padding: 10px; gap: 10px; }
+      .product { width: 200px; padding: 10px; }
+      .product img { height: 120px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>M. Siddique Rice Store</h1>
+  <p id="status-line">Pure Quality. Pure Taste.</p>
+</header>
+
+<!-- 🔝 Categories Navbar -->
+<nav class="navbar">
+  <ul>
+    <li><a href="#">🏠 Home</a></li>
+    <li><a href="#product-slider">🛍️ Products</a></li>
+    <li><a href="#cart-items">🛒 Cart</a></li>
+    <li><a href="#admin-panel">🔧 Admin</a></li>
+  </ul>
+</nav>
+
+<!-- 🔍 Search -->
+<div style="text-align:center; margin: 20px;">
+  <input type="text" id="search-input" placeholder="🔍 Search for items..." oninput="loadProducts()" style="padding: 10px; width: 80%; max-width: 400px; font-size: 16px;">
+</div>
+
+<!-- 📦 Products -->
+<section class="slider" id="product-slider"></section>
+
+<!-- 🛒 Cart -->
+<section class="cart">
+  <h2>🛒 Your Cart</h2>
+  <div class="cart-items" id="cart-items"></div>
+  <button class="order-btn" onclick="placeOrder()">Send Order on WhatsApp</button>
+</section>
+
+<!-- 🔧 Admin Panel -->
+<section class="cart" id="admin-panel" style="display:none;">
+  <h2>🔧 Admin Panel</h2>
+  <div class="admin-controls">
+    <strong>Shop Controls</strong><br>
+    <button onclick="toggleShop(true)">Open Shop</button>
+    <button onclick="toggleShop(false)">Close Shop</button>
+    <p id="admin-status"></p>
+    <hr>
+    <strong>📦 Restock Product</strong><br>
+    <select id="restock-select"></select>
+    <input type="number" id="restock-amount" placeholder="Add Quantity">
+    <input type="number" id="restock-price" placeholder="Update Price">
+    <input type="text" id="restock-image" placeholder="New Image URL">
+    <button onclick="restockProduct()">Update Product</button>
+    <hr>
+    <strong>➕ Add New Product</strong><br>
+    <input type="text" id="new-name" placeholder="Product Name">
+    <input type="number" id="new-price" placeholder="Price">
+    <input type="number" id="new-stock" placeholder="Stock">
+    <input type="text" id="new-image" placeholder="Image URL">
+    <button onclick="addNewProduct()">Add Product</button>
+  </div>
+</section>
+
+<!-- 🔐 Admin Login Button -->
+<div style="text-align:center; margin-bottom: 30px;">
+  <button onclick="adminLogin()" style="padding: 10px 20px; font-weight:bold;">🔐 Admin Login</button>
+</div>
+
+<script>
+  let cart = [];
+  const products = [
+    { name: "Rice", price: 200, stock: 5, image: "https://i.imgur.com/dW4r0Zj.png" },
+    { name: "Sugar", price: 90, stock: 4, image: "https://i.imgur.com/CVZ9Z8b.png" },
+    { name: "Daal", price: 160, stock: 6, image: "https://i.imgur.com/SsJmZ9S.png" },
+    { name: "Soap", price: 50, stock: 10, image: "https://i.imgur.com/FgAGnKI.png" },
+    { name: "Shampoo", price: 120, stock: 4, image: "https://i.imgur.com/Z5qKkdu.png" },
+    { name: "Garam Masala", price: 70, stock: 3, image: "https://i.imgur.com/QK2rWlR.png" },
+    { name: "Pasta", price: 130, stock: 5, image: "https://i.imgur.com/vuZZC8P.png" },
+    { name: "Toothpaste", price: 60, stock: 6, image: "https://i.imgur.com/MuVK0o6.png" },
+    { name: "Salt", price: 40, stock: 8, image: "https://i.imgur.com/SV9fv6H.png" },
+    { name: "Cooking Oil", price: 320, stock: 4, image: "https://i.imgur.com/f6YgaA7.png" }
+  ];
+
+  function getSettings() {
+    return { isOpen: JSON.parse(localStorage.getItem('isOpen')) ?? true };
+  }
+
+  function updateStatusLine() {
+    const { isOpen } = getSettings();
+    document.getElementById("status-line").innerText = `Pure Quality. Pure Taste. | Shop is ${isOpen ? 'OPEN' : 'CLOSED'}`;
+  }
+
+  function isShopOpen() {
+    return getSettings().isOpen;
+  }
+
+  function loadProducts() {
+    const container = document.getElementById("product-slider");
+    const searchTerm = document.getElementById("search-input")?.value?.toLowerCase() || "";
+    container.innerHTML = "";
+
+    if (!isShopOpen()) {
+      container.innerHTML = `<h2 style='color:red; text-align:center;'>⛔ Shop is closed. Please come back later.</h2>`;
+      return;
+    }
+
+    const filtered = products.filter(p => p.name.toLowerCase().includes(searchTerm));
+    if (filtered.length === 0) {
+      container.innerHTML = `<h3 style='text-align:center;'>No items found for "${searchTerm}"</h3>`;
+      return;
+    }
+
+    filtered.forEach((product, index) => {
+      const div = document.createElement("div");
+      div.className = "product";
+      div.innerHTML = `
+        <img src="${product.image}" alt="${product.name}">
+        <h3>${product.name}</h3>
+        <p>Rs. ${product.price} (${product.stock} left)</p>
+        <button onclick="addToCart(${products.indexOf(product)})" ${product.stock === 0 ? "disabled" : ""}>Add to Cart</button>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function updateCart() {
+    const container = document.getElementById('cart-items');
+    container.innerHTML = cart.length === 0 ? '<p>Your cart is empty</p>' : '';
+    cart.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.innerHTML = `${i + 1}. ${item.product} - Rs. ${item.price} <button onclick="removeFromCart(${i})">❌</button>`;
+      container.appendChild(div);
+    });
+  }
+
+  function addToCart(index) {
+    const product = products[index];
+    if (product.stock <= 0) return alert("Out of stock!");
+    cart.push({ product: product.name, price: product.price });
+    product.stock -= 1;
+    updateCart();
+    loadProducts();
+  }
+
+  function removeFromCart(index) {
+    const removed = cart.splice(index, 1)[0];
+    const product = products.find(p => p.name === removed.product);
+    if (product) product.stock += 1;
+    updateCart();
+    loadProducts();
+  }
+
+  function placeOrder() {
+    if (!isShopOpen()) return alert("Shop is closed!");
+    if (cart.length === 0) return alert('Cart is empty!');
+    let message = `*New Order - M. Siddique Rice Store*%0A%0A`;
+    let total = 0;
+    cart.forEach((item, i) => {
+      message += `${i + 1}. ${item.product} - Rs. ${item.price}%0A`;
+      total += item.price;
+    });
+    message += `%0A*Total: Rs. ${total}*`;
+    window.open(`https://wa.me/923322100881?text=${message}`, "_blank");
+    cart = [];
+    updateCart();
+  }
+
+  function adminLogin() {
+    const pass = prompt("Enter Admin Password:");
+    if (pass === "admin123") {
+      document.getElementById("admin-panel").style.display = "block";
+      updateAdminPanel();
+      updateRestockDropdown();
+    } else {
+      alert("Wrong password!");
+    }
+  }
+
+  function toggleShop(state) {
+    localStorage.setItem('isOpen', state);
+    updateStatusLine();
+    loadProducts();
+    updateAdminPanel();
+  }
+
+  function updateAdminPanel() {
+    document.getElementById("admin-status").innerText = `Shop is ${isShopOpen() ? 'OPEN' : 'CLOSED'}`;
+  }
+
+  function updateRestockDropdown() {
+    const dropdown = document.getElementById("restock-select");
+    dropdown.innerHTML = "";
+    products.forEach((p, i) => {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.innerText = `${p.name}`;
+      dropdown.appendChild(opt);
+    });
+  }
+
+  function restockProduct() {
+    const index = parseInt(document.getElementById("restock-select").value);
+    const amount = parseInt(document.getElementById("restock-amount").value);
+    const newPrice = parseInt(document.getElementById("restock-price").value);
+    const newImage = document.getElementById("restock-image").value.trim();
+    if (!isNaN(amount) && amount > 0) products[index].stock += amount;
+    if (!isNaN(newPrice) && newPrice > 0) products[index].price = newPrice;
+    if (newImage) products[index].image = newImage;
+    loadProducts();
+    alert("Product updated successfully!");
+  }
+
+  function addNewProduct() {
+    const name = document.getElementById("new-name").value.trim();
+    const price = parseInt(document.getElementById("new-price").value);
+    const stock = parseInt(document.getElementById("new-stock").value);
+    const image = document.getElementById("new-image").value.trim();
+    if (!name || isNaN(price) || isNaN(stock) || !image) {
+      return alert("Please fill all fields correctly!");
+    }
+    products.push({ name, price, stock, image });
+    alert(`Product "${name}" added successfully!`);
+    loadProducts();
+    updateRestockDropdown();
+    document.getElementById("new-name").value = "";
+    document.getElementById("new-price").value = "";
+    document.getElementById("new-stock").value = "";
+    document.getElementById("new-image").value = "";
+  }
+
+  updateStatusLine();
+  loadProducts();
+</script>
+
+</body>
+</html>
